@@ -5,7 +5,7 @@ import re
 
 app = Flask(__name__)
 
-# HTML Template with a clean look
+# HTML Template
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -38,6 +38,7 @@ HTML_TEMPLATE = """
             background: #f9f9f9;
         }
         code { background: #eee; padding: 2px 4px; }
+        ul { margin-top: 10px; }
     </style>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async
@@ -45,7 +46,7 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <h2>Formula Renderer</h2>
-    <p>Enter a formula name and get its LaTeX form, rendered beautifully.</p>
+    <p>Enter a formula name and get its LaTeX form with symbol explanations and constants.</p>
     <form method="POST">
         <input type="text" name="formula_name" placeholder="e.g. Quadratic Formula" required>
         <button type="submit">Generate</button>
@@ -57,6 +58,24 @@ HTML_TEMPLATE = """
         <p><strong>LaTeX:</strong> <code>{{ latex }}</code></p>
         <p><strong>Rendered:</strong></p>
         <p>$$ {{ latex }} $$</p>
+
+        {% if symbols %}
+        <h4>Symbols:</h4>
+        <ul>
+            {% for sym, desc in symbols.items() %}
+            <li><strong>{{ sym }}</strong> : {{ desc }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if constants %}
+        <h4>Constants:</h4>
+        <ul>
+            {% for const, val in constants.items() %}
+            <li><strong>{{ const }}</strong> : {{ val }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </div>
     {% endif %}
 </body>
@@ -101,16 +120,33 @@ def extract_json(text: str) -> dict:
 @app.route("/", methods=["GET", "POST"])
 def index():
     latex_formula = None
+    symbols = None
+    constants = None
+
     if request.method == "POST":
         formula_name = request.form.get("formula_name")
 
-        # Strict prompt for Gemma
+        # Strict prompt for Gemma with constants included
         prompt = f"""
 You are an API. Respond with ONLY valid JSON.
-The JSON must have exactly one key: "latex".
+The JSON must have exactly three keys: "latex", "symbols", and "constants".
+- "latex" = LaTeX representation of the formula.
+- "symbols" = dictionary where keys are symbols and values are their meanings.
+- "constants" = dictionary where keys are constants and values are their standard values.
 
 Example:
-{{"latex": "x = \\\\frac{{-b \\\\pm \\\\sqrt{{b^2 - 4ac}}}}{{2a}}" }}
+{{
+  "latex": "F = ma",
+  "symbols": {{
+    "F": "Force",
+    "m": "Mass",
+    "a": "Acceleration"
+  }},
+  "constants": {{
+    "g": "9.81 m/s^2 (acceleration due to gravity)",
+    "π": "3.14159 (pi)"
+  }}
+}}
 
 Now return the formula '{formula_name}' in JSON.
 """
@@ -120,10 +156,17 @@ Now return the formula '{formula_name}' in JSON.
 
         if "latex" in data:
             latex_formula = data["latex"]
+            symbols = data.get("symbols", None)
+            constants = data.get("constants", None)
         else:
             latex_formula = f"Error: Could not parse JSON. See gemma_raw_response.txt."
 
-    return render_template_string(HTML_TEMPLATE, latex=latex_formula)
+    return render_template_string(
+        HTML_TEMPLATE,
+        latex=latex_formula,
+        symbols=symbols,
+        constants=constants
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
