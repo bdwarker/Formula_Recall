@@ -4,3 +4,4 @@ node_modules/
 __pycache__
 *.exe
 *.DS_Store
+gemma_raw_response.txt
