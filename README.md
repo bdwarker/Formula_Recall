@@ -1,4 +1,4 @@
-# 📐 Formula Renderer
+# 📐 Formula Recall
 
 A lightweight Flask web app that takes the **name of a mathematical formula**, queries the **Ollama model (gemma3:4b)**, and returns the **LaTeX representation** of the formula. The result is displayed both as raw LaTeX and as a beautifully rendered formula using MathJax.
 
